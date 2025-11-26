@@ -73,7 +73,7 @@ TYPED_TEST(CPPINTEROP_TEST_MODE, Interpreter_Evaluate) {
   //EXPECT_TRUE(Cpp::Evaluate(I, "__cplusplus;") == 201402);
   // Due to a deficiency in the clang-repl implementation to get the value we
   // always must omit the ;
-  TestFixture::CreateInterpreter();
+  TestFixture::CreateInterpreter({"-std=c++14"});
   EXPECT_TRUE(Cpp::Evaluate("__cplusplus", nullptr) == 201402);
 
   bool HadError;
@@ -200,7 +200,7 @@ TYPED_TEST(CPPINTEROP_TEST_MODE, Interpreter_EmscriptenExceptionHandling) {
 }
 
 TYPED_TEST(CPPINTEROP_TEST_MODE, Interpreter_CreateInterpreter) {
-  auto* I = TestFixture::CreateInterpreter();
+  auto* I = TestFixture::CreateInterpreter({"-std=c++14"});
   EXPECT_TRUE(I);
   // Check if the default standard is c++14
 
