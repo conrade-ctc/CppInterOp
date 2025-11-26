@@ -28,8 +28,9 @@
 *.app
 
 # Directories
-build
+build*
 install
+cppyy-backend
 
 # CLion files
 .idea
