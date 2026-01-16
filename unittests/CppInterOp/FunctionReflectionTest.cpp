@@ -2303,6 +2303,53 @@ TYPED_TEST(CppInterOpTest, FunctionReflectionTestGetFunctionCallWrapper) {
   EXPECT_FALSE(Cpp::IsLambdaClass(Cpp::GetFunctionReturnType(bar)));
 }
 
+constexpr auto run_dtor_test = [](std::string const& code0) {
+  static int dtor_idx = 0;
+  std::string name = "C" + std::to_string(++dtor_idx);
+
+  Interp->process("#include <string>");
+
+  std::string code = R"(
+    void c() { printf("Ctor"); }
+    void d() { printf("Dtor"); }
+  )" + code0;
+
+  Interp->process(("namespace NS" + name + "{ " + code + "}").c_str());
+
+  clang::NamedDecl* ClassC = (clang::NamedDecl*)Cpp::GetNamed(
+      name.c_str(), Cpp::GetNamed(("NS" + name).c_str()));
+
+  auto* CtorD = (clang::CXXConstructorDecl*)Cpp::GetDefaultConstructor(ClassC);
+  auto FCI_Ctor = Cpp::MakeFunctionCallable(CtorD);
+  void* object = nullptr;
+  testing::internal::CaptureStdout();
+  FCI_Ctor.Invoke((void*)&object);
+  std::string output = testing::internal::GetCapturedStdout();
+
+  EXPECT_EQ(output, "Ctor");
+  EXPECT_TRUE(object != nullptr);
+
+  auto* DtorD = (clang::CXXDestructorDecl*)Cpp::GetDestructor(ClassC);
+  auto FCI_Dtor = Cpp::MakeFunctionCallable(DtorD);
+  testing::internal::CaptureStdout();
+  FCI_Dtor.Invoke(object);
+  output = testing::internal::GetCapturedStdout();
+
+  EXPECT_EQ(output, "Dtor");
+  EXPECT_TRUE(object != nullptr);
+};
+
+TYPED_TEST(CppInterOpTest, FunctionReflectionTestVDtorOutsideClassDef) {
+  run_dtor_test("struct C1 { C1() {c();}         ~C1() {d();}};");
+  run_dtor_test("struct C2 { C2() {c();} virtual ~C2() {d();}};");
+  run_dtor_test("struct C3 { C3() {c();}         ~C3(); }; C3::~C3() {d();}");
+}
+
+TYPED_TEST(CppInterOpTest,
+           DISABLED_FunctionReflectionTestVDtorOutsideClassDef) {
+  run_dtor_test("struct C4 { C4() {c();} virtual ~C4(); }; C4::~C4() {d();}");
+}
+
 TYPED_TEST(CppInterOpTest, FunctionReflectionTestIsConstMethod) {
   std::vector<Decl*> Decls, SubDecls;
   std::string code = R"(
