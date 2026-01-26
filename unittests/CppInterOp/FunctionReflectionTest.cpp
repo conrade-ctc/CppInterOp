@@ -2303,21 +2303,27 @@ TYPED_TEST(CppInterOpTest, FunctionReflectionTestGetFunctionCallWrapper) {
   EXPECT_FALSE(Cpp::IsLambdaClass(Cpp::GetFunctionReturnType(bar)));
 }
 
-constexpr auto run_dtor_test = [](std::string const& code0) {
+constexpr auto run_dtor_test = [](std::string const& code0, std::string const &code1 = "") {
   static int dtor_idx = 0;
-  std::string name = "C" + std::to_string(++dtor_idx);
+  std::string ns = "NS" + std::to_string(++dtor_idx);
 
   Interp->process("#include <string>");
+  Interp->process("#include <cstddef>");
 
   std::string code = R"(
     void c() { printf("Ctor"); }
     void d() { printf("Dtor"); }
+    void pass() { printf("pass"); }
+    void fail() { printf("fail"); }
   )" + code0;
+  code += "\n  void code1f() {\n";
+  code += code1;
+  code += "\n  }\n";
 
-  Interp->process(("namespace NS" + name + "{ " + code + "}").c_str());
+  Interp->process(("namespace " + ns + " { " + code + " }").c_str());
 
   clang::NamedDecl* ClassC = (clang::NamedDecl*)Cpp::GetNamed(
-      name.c_str(), Cpp::GetNamed(("NS" + name).c_str()));
+      "C", Cpp::GetNamed(ns.c_str()));
 
   auto* CtorD = (clang::CXXConstructorDecl*)Cpp::GetDefaultConstructor(ClassC);
   auto FCI_Ctor = Cpp::MakeFunctionCallable(CtorD);
@@ -2337,17 +2343,29 @@ constexpr auto run_dtor_test = [](std::string const& code0) {
 
   EXPECT_EQ(output, "Dtor");
   EXPECT_TRUE(object != nullptr);
+
+  if(std::size(code1) > 0) {
+      testing::internal::CaptureStdout();
+      Interp->process((ns + "::code1f();").c_str());
+      output = testing::internal::GetCapturedStdout();
+      EXPECT_EQ(output, "CtorpassDtor");
+  }
 };
 
 TYPED_TEST(CppInterOpTest, FunctionReflectionTestVDtorOutsideClassDef) {
-  run_dtor_test("struct C1 { C1() {c();}         ~C1() {d();}};");
-  run_dtor_test("struct C2 { C2() {c();} virtual ~C2() {d();}};");
-  run_dtor_test("struct C3 { C3() {c();}         ~C3(); }; C3::~C3() {d();}");
+  run_dtor_test("struct C { C() {c();}         ~C() {d();}};");
+  run_dtor_test("struct C { C() {c();} virtual ~C() {d();}};");
+  run_dtor_test("struct C { C() {c();}         ~C(); }; C::~C() {d();}");
 }
 
 TYPED_TEST(CppInterOpTest,
            DISABLED_FunctionReflectionTestVDtorOutsideClassDef) {
-  run_dtor_test("struct C4 { C4() {c();} virtual ~C4(); }; C4::~C4() {d();}");
+  run_dtor_test("struct C { C() {c();} virtual ~C(); }; C::~C() {d();}");
+}
+
+TYPED_TEST(CppInterOpTest, FunctionReflectionConstRef) {
+  run_dtor_test("struct C { std::byte b{'d'}; const std::byte &ref() { return b; } C() {c();} ~C() {d();} };",
+		"auto x = C(); if(x.ref()==(std::byte)'d') pass(); else fail();");
 }
 
 TYPED_TEST(CppInterOpTest, FunctionReflectionTestIsConstMethod) {
