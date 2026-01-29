@@ -212,12 +212,15 @@ inline void* dlGetProcAddress(const char* name,
         FreeLibrary(h);
     }
 #else
+    std::cout << "attempting to dlopen " << path << "..." << std::endl;
     void* handle = dlopen(path, RTLD_LOCAL | RTLD_NOW);
     if (handle) {
       // NOLINTNEXTLINE(cppcoreguidelines-pro-type-reinterpret-cast)
       getProc = reinterpret_cast<void* (*)(const char*)>(
           dlsym(handle, "CppGetProcAddress"));
       if (!getProc) dlclose(handle);
+    } else {
+      std::cerr << "failed to dlopen " << path << "\n" << dlerror() << "..." << std::endl;
     }
 #endif
   });

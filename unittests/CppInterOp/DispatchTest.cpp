@@ -15,6 +15,16 @@ using namespace clang;
 
 // NOLINTBEGIN(cppcoreguidelines-pro-type-reinterpret-cast)
 
+TEST(CPPINTEROP_TEST_MODE, DispatchAPI_LoadDispatchAPI_GoodPath) {
+  Cpp::UnloadDispatchAPI();
+  EXPECT_TRUE(Cpp::LoadDispatchAPI(CPPINTEROP_LIB_PATH));
+}
+
+TEST(CPPINTEROP_TEST_MODE, DispatchAPI_LoadDispatchAPI_BadPath) {
+  Cpp::UnloadDispatchAPI();
+  EXPECT_FALSE(Cpp::LoadDispatchAPI("some/path/that/isnt.so"));
+}
+
 TEST(CPPINTEROP_TEST_MODE, DispatchAPI_CppGetProcAddress_Basic) {
   auto IsClassFn =
       reinterpret_cast<CppAPIType::IsClass>(CppGetProcAddress("IsClass"));
