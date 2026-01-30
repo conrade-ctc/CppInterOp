@@ -2346,7 +2346,7 @@ constexpr auto run_dtor_test = [](std::string const& code0) {
   Interp->process(("namespace NS" + name + "{ " + code + "}").c_str());
 
   clang::NamedDecl* ClassC = (clang::NamedDecl*)Cpp::GetNamed(
-      name.c_str(), Cpp::GetNamed(("NS" + name).c_str()));
+      name.c_str(), Cpp::GetNamed(("NS" + name).c_str() DFLT_NULLPTR));
 
   auto* CtorD = (clang::CXXConstructorDecl*)Cpp::GetDefaultConstructor(ClassC);
   auto FCI_Ctor = Cpp::MakeFunctionCallable(CtorD);

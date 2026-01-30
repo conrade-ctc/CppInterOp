@@ -25,7 +25,15 @@ CPPINTEROP_API_TABLE
 namespace {
 struct DispatchInitializer {
   DispatchInitializer() {
-    if (!Cpp::LoadDispatchAPI(CPPINTEROP_LIB_PATH)) {
+    std::string CppInterOpLib;
+    if(getenv("CPPINTEROP_LIBRARY"))
+        CppInterOpLib = getenv("CPPINTEROP_LIBRARY");
+#ifdef CPPINTEROP_LIB_PATH
+    else 
+        CppInterOpLib = CPPINTEROP_LIB_PATH;
+#endif
+
+    if (!Cpp::LoadDispatchAPI(CppInterOpLib.c_str())) {
       std::abort();
     }
   }
