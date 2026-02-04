@@ -1,6 +1,8 @@
 #include <CppInterOp/Dispatch.h>
 
 #include <iostream> // for std::cerr
+#include <memory>
+#include <mutex>
 #include <string_view>
 #include <unordered_map>
 
@@ -12,6 +14,10 @@ static const std::unordered_map<std::string_view, CppFnPtrTy> DispatchMap = {
 #undef DISPATCH_API
 };
 // NOLINTEND(cppcoreguidelines-pro-type-cstyle-cast)
+
+std::unique_ptr<std::once_flag> GetProcData::init =
+    std::make_unique<std::once_flag>();
+void* (*GetProcData::getProc)(const char*) = nullptr;
 
 CppFnPtrTy CppGetProcAddress(const char* funcName) {
   auto it = DispatchMap.find(funcName);

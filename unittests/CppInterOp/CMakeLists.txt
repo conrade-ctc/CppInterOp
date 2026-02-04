@@ -13,6 +13,7 @@ endif()
 add_cppinterop_unittest(CppInterOpTests
   ENABLE_DISPATCH
   CommentReflectionTest.cpp
+  DispatchLoadUnloadTest.cpp
   EnumReflectionTest.cpp
   FunctionReflectionTest.cpp
   InterpreterTest.cpp
@@ -23,6 +24,7 @@ add_cppinterop_unittest(CppInterOpTests
   VariableReflectionTest.cpp
   ${EXTRA_TEST_SOURCE_FILES}
 )
+
 
 if(NOT WIN32)
   set_source_files_properties(VariableReflectionTest.cpp PROPERTIES COMPILE_FLAGS
@@ -86,6 +88,7 @@ add_cppinterop_unittest(DynamicLibraryManagerTests
   Utils.cpp 
   ${EXTRA_TEST_SOURCE_FILES}
 )
+
 
 if(EMSCRIPTEN)
   set(TEST_SHARED_LIBRARY_PATH "${CMAKE_CURRENT_BINARY_DIR}/bin/$<CONFIG>/")

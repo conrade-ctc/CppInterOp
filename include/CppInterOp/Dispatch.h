@@ -25,6 +25,7 @@
 
 #include <cstdlib>
 #include <iostream>
+#include <memory>
 #include <mutex>
 
 #ifdef _WIN32
@@ -188,17 +189,28 @@ extern "C" CPPINTEROP_API CppFnPtrTy CppGetProcAddress(const char* procname);
                CppImpl::TCppFuncAddr_t (*)(CppImpl::TCppFunction_t))           \
   /*DISPATCH_API(API_name, fnptr_ty)*/
 
+// enable controlled reset via Unload
+struct GetProcData {
+  static std::unique_ptr<std::once_flag> init;
+  static void* (*getProc)(const char*);
+
+  static auto& once() { return *GetProcData::init; }
+  static auto& proc() { return GetProcData::getProc; }
+
+  static void reset() {
+    GetProcData::init = std::make_unique<std::once_flag>();
+    GetProcData::getProc = nullptr;
+  }
+};
+
 // TODO: implement overload that takes an existing opened DL handle
 inline void* dlGetProcAddress(const char* name,
                               const char* customLibPath = nullptr) {
   if (!name)
     return nullptr;
 
-  static std::once_flag init;
-  static void* (*getProc)(const char*) = nullptr;
-
   // this is currently not tested in a multiple thread/process setup
-  std::call_once(init, [customLibPath]() {
+  std::call_once(GetProcData::once(), [customLibPath]() {
     const char* path =
         customLibPath ? customLibPath : std::getenv("CPPINTEROP_LIBRARY_PATH");
     if (!path)
@@ -207,23 +219,23 @@ inline void* dlGetProcAddress(const char* name,
 #ifdef _WIN32
     HMODULE h = LoadLibraryA(path);
     if (h) {
-      getProc = reinterpret_cast<void* (*)(const char*)>(
+      GetProcData::proc() = reinterpret_cast<void* (*)(const char*)>(
           GetProcAddress(h, "CppGetProcAddress"));
-      if (!getProc)
+      if (!GetProcData::proc())
         FreeLibrary(h);
     }
 #else
     void* handle = dlopen(path, RTLD_LOCAL | RTLD_NOW);
     if (handle) {
       // NOLINTNEXTLINE(cppcoreguidelines-pro-type-reinterpret-cast)
-      getProc = reinterpret_cast<void* (*)(const char*)>(
+      GetProcData::proc() = reinterpret_cast<void* (*)(const char*)>(
           dlsym(handle, "CppGetProcAddress"));
-      if (!getProc) dlclose(handle);
+      if (!GetProcData::proc()) dlclose(handle);
     }
 #endif
   });
 
-  return getProc ? getProc(name) : nullptr;
+  return GetProcData::proc() ? GetProcData::proc()(name) : nullptr;
 }
 
 // CppAPIType is used for the extern clauses below
@@ -260,6 +272,7 @@ inline bool LoadDispatchAPI(const char* customLibPath = nullptr) {
     if (!test) {
       std::cerr << "[CppInterOp Dispatch] Failed to load API from: "
                 << customLibPath << '\n';
+      std::cerr << "[CppInterOp Dispatch] " << dlerror() << "\n";
       return false;
     }
   }
@@ -286,6 +299,7 @@ inline void UnloadDispatchAPI() {
 #define DISPATCH_API(name, type) name = nullptr;
   CPPINTEROP_API_TABLE
 #undef DISPATCH_API
+  GetProcData::reset();
 }
 } // namespace CppInternal::Dispatch
 

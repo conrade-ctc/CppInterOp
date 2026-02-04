@@ -39,6 +39,7 @@ function(add_cppinterop_unittest name)
   add_executable(${name} EXCLUDE_FROM_ALL ${ARG_UNPARSED_ARGUMENTS})
   add_dependencies(CppInterOpUnitTests ${name})
   target_include_directories(${name} PUBLIC ${CMAKE_CURRENT_BINARY_DIR} ${GTEST_INCLUDE_DIR})
+  target_compile_definitions(${name} PRIVATE CPPINTEROP_LIB_PATH="${CMAKE_BINARY_DIR}/lib/libclangCppInterOp${CMAKE_SHARED_LIBRARY_SUFFIX}")
   set_property(TARGET ${name} PROPERTY RUNTIME_OUTPUT_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR})
   export_executable_symbols(${name})
 
@@ -77,10 +78,7 @@ function(add_cppinterop_unittest name)
   # FIXME: Enable for WASM builds
   if (NOT EMSCRIPTEN AND ARG_ENABLE_DISPATCH AND BUILD_SHARED_LIBS)
     add_cppinterop_unittest(${name}Dispatch ${ARG_UNPARSED_ARGUMENTS} DispatchTest.cpp)
-    target_compile_definitions(${name}Dispatch PRIVATE 
-      ENABLE_DISPATCH_TESTS
-      CPPINTEROP_LIB_PATH="${CMAKE_BINARY_DIR}/lib/libclangCppInterOp${CMAKE_SHARED_LIBRARY_SUFFIX}"
-    )
+    target_compile_definitions(${name}Dispatch PRIVATE ENABLE_DISPATCH_TESTS)
   endif()
 endfunction()
 
