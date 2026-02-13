@@ -3340,21 +3340,8 @@ TInterp_t CreateInterpreter(const std::vector<const char*>& Args /*={}*/,
       (T.isOSDarwin() || T.isOSLinux()))
     ResourceDir = DetectResourceDir();
 
-  std::vector<const char*> ClingArgv = {"-resource-dir", ResourceDir.c_str()};
-
-#ifndef CTC_BUILD_HACKS
-  ClingArgv.push_back("-std=c++14");
-#else
-  std::string IncludeDir = ResourceDir + "/../../../../gcc/include/c++/14.2.0";
-  std::string Istring0 = "-stdlib++-isystem" + IncludeDir;
-  std::string Istring1 =
-      "-stdlib++-isystem" + IncludeDir + "/x86_64-pc-linux-gnu";
-
-  ClingArgv.push_back("-std=c++20");
-  ClingArgv.push_back(Istring0.c_str());
-  ClingArgv.push_back(Istring1.c_str());
-#endif
-
+  std::vector<const char*> ClingArgv = {"-resource-dir", ResourceDir.c_str(),
+                                        "-std=c++14"};
   ClingArgv.insert(ClingArgv.begin(), MainExecutableName.c_str());
 #ifdef _WIN32
   // FIXME : Workaround Sema::PushDeclContext assert on windows
@@ -3375,9 +3362,6 @@ TInterp_t CreateInterpreter(const std::vector<const char*>& Args /*={}*/,
   }
   ClingArgv.insert(ClingArgv.end(), GpuArgs.begin(), GpuArgs.end());
 
-#if __BROKEN__
-  // THIS ONLY GETS FIRST space delimeted arg
-
   // Process externally passed arguments if present.
   std::vector<std::string> ExtraArgs;
   auto EnvOpt = llvm::sys::Process::GetEnv("CPPINTEROP_EXTRA_INTERPRETER_ARGS");
@@ -3393,13 +3377,12 @@ TInterp_t CreateInterpreter(const std::vector<const char*>& Args /*={}*/,
   std::transform(ExtraArgs.begin(), ExtraArgs.end(),
                  std::back_inserter(ClingArgv),
                  [&](const std::string& str) { return str.c_str(); });
-#endif
 
 #ifdef CPPINTEROP_USE_CLING
   auto I = new compat::Interpreter(ClingArgv.size(), &ClingArgv[0]);
 #else
 
-#ifdef CTC_BUILD_HACKS0
+#ifdef CTC_BUILD_HACKS
   llvm::errs() << "[CreateInterpreter]: with args";
   for (auto const* v : ClingArgv) {
     llvm::errs() << " " << v;
